@@ -1,42 +1,113 @@
 const getState = ({ getStore, getActions, setStore }) => {
 	return {
 		store: {
-			demo: [
-				{
-					title: "FIRST",
-					background: "white",
-					initial: "white"
-				},
-				{
-					title: "SECOND",
-					background: "white",
-					initial: "white"
-				}
-			]
+			contactList: []
 		},
 		actions: {
-			// Use getActions to call a function within a fuction
-			exampleFunction: () => {
-				getActions().changeColor(0, "green");
+			getContacts: async () => {
+				try {
+					const response = await fetch("https://playground.4geeks.com/contact/agendas/javier/contacts");
+					if (!response.ok) {
+						getActions().createAgenda();
+						return;
+					}
+
+					const data = await response.json();
+
+					if (data) setStore({ contactList: data.contacts });
+
+					return data;
+
+				} catch (error) {
+					console.log(error);
+				}
 			},
-			loadSomeData: () => {
-				/**
-					fetch().then().then(data => setStore({ "foo": data.bar }))
-				*/
+
+			createAgenda: async () => {
+				try {
+					const response = await fetch("https://playground.4geeks.com/contact/agendas/javier", {
+						method: "POST",
+					})
+
+					if (!response.ok) throw new Error(response.statusText);
+
+					const data = await response.json();
+					console.log(data);
+
+				} catch (error) {
+					console.log(error);
+				}
 			},
-			changeColor: (index, color) => {
-				//get the store
+
+			addContact: (contact) => {
 				const store = getStore();
+				setStore({ ...store, contactList: [...store.contactList, contact] });
+			},
 
-				//we have to loop the entire demo array to look for the respective index
-				//and change its color
-				const demo = store.demo.map((elm, i) => {
-					if (i === index) elm.background = color;
-					return elm;
-				});
+			createContact: async (contact) => {
+				try {
+					const response = await fetch("https://playground.4geeks.com/contact/agendas/javier/contacts", {
+						method: "POST",
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(contact),
+					})
 
-				//reset the global store
-				setStore({ demo: demo });
+					if (!response.ok) throw new Error(response.statusText);
+
+					const data = await response.json();
+					getActions().addContact(data);
+					
+				} catch (error) {
+					console.log(error);
+				}
+			},
+
+			deleteContact: async (id) => {
+				try {
+					const response = await fetch(`https://playground.4geeks.com/contact/agendas/javier/contacts/${id}`, {
+						method: "DELETE",
+					})
+
+					if (!response.ok) throw new Error(response.statusText);
+
+					const store = getStore();
+					const newContactList = store.contactList.filter(contact => contact.id !== id);
+					setStore({ contactList: newContactList });
+
+				} catch (error) {
+					console.log(error);
+				}
+			},
+
+			editContact: async (id, contact) => {
+				try {
+
+					const response = await fetch(`https://playground.4geeks.com/contact/agendas/javier/contacts/${id}`, {
+						method: "PUT",
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(contact)
+					})
+
+					if (!response.ok) throw new Error(response.statusText);
+
+					const data = await response.json();
+
+					if (data) {
+						const store = getStore();
+						const newContactList = store.contactList.map(contact => 
+							contact.id == id ? data : contact // Si el id del contacto coincide con el id editado se reemplaza con la data
+						);
+			
+						setStore({ contactList: newContactList });
+					}
+
+				} catch (error) {
+					console.log(error);
+				}
 			}
 		}
 	};
